@@ -14,6 +14,7 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
 from Arena import Arena
+from othello.OthelloPlayers import RandomPlayer
 
 log = logging.getLogger(__name__)
 
@@ -126,7 +127,8 @@ class SupervisedCoach():
 
             # Add new arena comparison against random player
             log.info('PITTING AGAINST RANDOM PLAYER')
-            random_arena = Arena(lambda x: np.random.choice(self.game.getValidMoves(x).nonzero()[0]),
+            rp = RandomPlayer(self.game).play
+            random_arena = Arena(rp,
                                lambda x: np.argmax(self.nnet.predict(x)), self.game)
             rwins, nnwins, rdraws = random_arena.playGames(self.args.arenaCompare)
             log.info('NEW/RANDOM WINS : %d / %d ; DRAWS : %d' % (nnwins, rwins, rdraws))
