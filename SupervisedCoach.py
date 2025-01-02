@@ -123,6 +123,25 @@ class SupervisedCoach():
             pwins, nwins, draws = arena.playGames(self.args.arenaCompare)
 
             log.info('NEW/PREV WINS : %d / %d ; DRAWS : %d' % (nwins, pwins, draws))
+
+            # Add new arena comparison against random player
+            log.info('PITTING AGAINST RANDOM PLAYER')
+            random_arena = Arena(lambda x: np.random.choice(self.game.getValidMoves(x).nonzero()[0]),
+                               lambda x: np.argmax(self.nnet.predict(x)), self.game)
+            rwins, nnwins, rdraws = random_arena.playGames(self.args.arenaCompare)
+            log.info('NEW/RANDOM WINS : %d / %d ; DRAWS : %d' % (nnwins, rwins, rdraws))
+
+            # Log final metrics to wandb
+            wandb.log({
+                'epoch': epoch + 1,
+                'arena_prev/new_model_wins': nwins,
+                'arena_prev/draws': draws,
+                'arena_prev/win_rate': float(nwins) / (pwins + nwins) if (pwins + nwins) > 0 else 0,
+                'arena_random/new_model_wins': nnwins,
+                'arena_random/draws': rdraws,
+                'arena_random/win_rate': float(nnwins) / (rwins + nnwins) if (rwins + nnwins) > 0 else 0,
+                'epoch_loss': epoch_loss
+            })
             # if pwins + nwins == 0 or float(nwins) / (pwins + nwins) < self.args.updateThreshold:
             #     log.info('REJECTING NEW MODEL')
             #     self.nnet.load_checkpoint(folder=self.args.checkpoint, filename='temp.pth.tar')

@@ -60,7 +60,7 @@ args = dotdict({
     'project_name': 'alpha-zero-othello',
     'seed': 42,
 
-    'batch_size': 128,
+    'batch_size': 512,
     'epochs': 10,
 })
 
