@@ -108,12 +108,12 @@ class SupervisedCoach():
         # wrap in dataloader
         train_loader = DataLoader(train_dataset, batch_size=self.args.batch_size, shuffle=True)
 
-        # training new network, keeping a copy of the old one
-        self.nnet.save_checkpoint(folder=self.args.checkpoint, filename='temp.pth.tar')
-        self.pnet.load_checkpoint(folder=self.args.checkpoint, filename='temp.pth.tar')
-
         # Training loop over epochs
         for epoch in range(self.args.epochs):
+            # training new network, keeping a copy of the old one
+            self.nnet.save_checkpoint(folder=self.args.checkpoint, filename='temp.pth.tar')
+            self.pnet.load_checkpoint(folder=self.args.checkpoint, filename='temp.pth.tar')
+
             print('EPOCH ::: ' + str(epoch + 1))
             epoch_loss = self.nnet.train(train_loader, epoch)
             log.info(f'Epoch {epoch + 1} average loss: {epoch_loss}')
