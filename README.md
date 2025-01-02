@@ -9,6 +9,12 @@ To start training a model for Othello:
 ```bash
 python main.py
 ```
+
+To start training a supervised model (from human demonstrations) for Othello:
+```bash
+python main.py --supervised
+```
+
 Choose your framework and game in ```main.py```.
 
 ### Docker Installation
