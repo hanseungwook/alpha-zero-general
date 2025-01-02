@@ -1,3 +1,6 @@
+.vscode/
+othello_trajectories.pt*
+wandb/
 *.pyc
 .DS_Store
 

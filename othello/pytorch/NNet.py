@@ -11,8 +11,10 @@ from NeuralNet import NeuralNet
 
 import torch
 import torch.optim as optim
+import wandb
 
 from .OthelloNNet import OthelloNNet as onnet
+from .OthelloNNet import OthelloNNetSupervised as snet
 
 args = dotdict({
     'lr': 0.001,
@@ -22,6 +24,106 @@ args = dotdict({
     'cuda': torch.cuda.is_available(),
     'num_channels': 512,
 })
+
+sup_args = dotdict({
+    'lr': 0.001,
+    'dropout': 0.3,
+    # 'epochs': 10,
+    # 'batch_size': 128,
+    'cuda': torch.cuda.is_available(),
+    'num_channels': 512,
+})
+
+class NNetWrapperSupervised(NeuralNet):
+    def __init__(self, game):
+        self.nnet = snet(game, sup_args)
+        self.board_x, self.board_y = game.getBoardSize()
+        self.action_size = game.getActionSize()
+        self.pi_losses = AverageMeter()
+
+        if args.cuda:
+            self.nnet.cuda()
+        
+        self.optimizer = optim.Adam(self.nnet.parameters())
+    
+    def train(self, train_loader, epoch):
+        """
+        train_loader: DataLoader containing (board, action) pairs
+        """
+        
+        self.nnet.train()
+
+        t = tqdm(train_loader, desc=f'Training Net Epoch {epoch + 1}')
+        for step, (boards, target_actions) in enumerate(t):
+            if args.cuda:
+                boards, target_actions = boards.contiguous().cuda(), target_actions.contiguous().cuda()
+
+            # compute output
+            out_pi = self.nnet(boards)
+            loss = self.loss_pi(out_pi, target_actions)
+
+            # record loss
+            self.pi_losses.update(loss.item(), boards.size(0))
+            t.set_postfix(Loss_pi=self.pi_losses)
+
+            # compute gradient and do SGD step
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
+
+            # Calculate global step
+            global_step = epoch * len(train_loader) + step
+
+            # Log metrics to wandb
+            wandb.log({
+                'train/loss': loss.cpu().detach().item(),
+                'train/step': global_step,
+            })
+
+        return self.pi_losses.avg
+
+    def predict(self, board):
+        """
+        board: np array with board
+        """
+        # timing
+        start = time.time()
+
+        # preparing input
+        if not isinstance(board, torch.Tensor):
+            board = torch.FloatTensor(board.astype(np.float64))
+        if args.cuda: board = board.contiguous().cuda()
+        board = board.view(1, self.board_x, self.board_y)
+        self.nnet.eval()
+        with torch.no_grad():
+            pi = self.nnet(board)
+
+        # print('PREDICTION TIME TAKEN : {0:03f}'.format(time.time()-start))
+        return torch.exp(pi).data.cpu().numpy()[0]
+
+    def save_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar'):
+        filepath = os.path.join(folder, filename)
+        if not os.path.exists(folder):
+            print("Checkpoint Directory does not exist! Making directory {}".format(folder))
+            os.mkdir(folder)
+        else:
+            print("Checkpoint Directory exists! ")
+        torch.save({
+            'state_dict': self.nnet.state_dict(),
+        }, filepath)
+
+    def load_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar'):
+        # https://github.com/pytorch/examples/blob/master/imagenet/main.py#L98
+        filepath = os.path.join(folder, filename)
+        if not os.path.exists(filepath):
+            raise ("No model in path {}".format(filepath))
+        map_location = None if args.cuda else 'cpu'
+        checkpoint = torch.load(filepath, map_location=map_location)
+        self.nnet.load_state_dict(checkpoint['state_dict'])
+
+    def loss_pi(self, targets, outputs):
+        return -torch.sum(targets * outputs) / targets.size()[0]
+    
 
 
 class NNetWrapper(NeuralNet):
@@ -74,6 +176,13 @@ class NNetWrapper(NeuralNet):
                 optimizer.zero_grad()
                 total_loss.backward()
                 optimizer.step()
+
+                # Log metrics to wandb
+                wandb.log({
+                    'train/policy_loss': l_pi.item(),
+                    'train/value_loss': l_v.item(),
+                    'train/total_loss': total_loss.item(),
+                })
 
     def predict(self, board):
         """

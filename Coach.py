@@ -6,7 +6,8 @@ from pickle import Pickler, Unpickler
 from random import shuffle
 
 import numpy as np
-from tqdm import tqdm
+from tqdm import tqdm, trange
+import wandb
 
 from Arena import Arena
 from MCTS import MCTS
@@ -77,7 +78,7 @@ class Coach():
         only if it wins >= updateThreshold fraction of games.
         """
 
-        for i in range(1, self.args.numIters + 1):
+        for i in trange(1, self.args.numIters + 1):
             # bookkeeping
             log.info(f'Starting Iter #{i} ...')
             # examples of the iteration
@@ -126,6 +127,14 @@ class Coach():
                 log.info('ACCEPTING NEW MODEL')
                 self.nnet.save_checkpoint(folder=self.args.checkpoint, filename=self.getCheckpointFile(i))
                 self.nnet.save_checkpoint(folder=self.args.checkpoint, filename='best.pth.tar')
+
+            # Log metrics to wandb
+            wandb.log({
+                'iteration': i,
+                'new_model_wins': nwins,
+                'draws': draws,
+                'win_rate': float(nwins) / (pwins + nwins) if (pwins + nwins) > 0 else 0
+            })
 
     def getCheckpointFile(self, iteration):
         return 'checkpoint_' + str(iteration) + '.pth.tar'
