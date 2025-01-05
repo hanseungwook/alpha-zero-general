@@ -216,25 +216,25 @@ class NNetWrapper(NeuralNet):
     def loss_v(self, targets, outputs):
         return torch.sum((targets - outputs.view(-1)) ** 2) / targets.size()[0]
 
-def save_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar', iteration=None):
-    filepath = os.path.join(folder, filename)
-    if not os.path.exists(folder):
-        print("Checkpoint Directory does not exist! Making directory {}".format(folder))
-        os.mkdir(folder)
-    else:
-        print("Checkpoint Directory exists!")
-    
-    checkpoint = {
-        'state_dict': self.nnet.state_dict(),
-        'iteration': iteration
-    }
-    torch.save(checkpoint, filepath)
+    def save_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar', iteration=None):
+        filepath = os.path.join(folder, filename)
+        if not os.path.exists(folder):
+            print("Checkpoint Directory does not exist! Making directory {}".format(folder))
+            os.mkdir(folder)
+        else:
+            print("Checkpoint Directory exists!")
+        
+        checkpoint = {
+            'state_dict': self.nnet.state_dict(),
+            'iteration': iteration
+        }
+        torch.save(checkpoint, filepath)
 
-def load_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar'):
-    filepath = os.path.join(folder, filename)
-    if not os.path.exists(filepath):
-        raise("No model in path {}".format(filepath))
-    map_location = None if args.cuda else 'cpu'
-    checkpoint = torch.load(filepath, map_location=map_location)
-    self.nnet.load_state_dict(checkpoint['state_dict'])
-    return checkpoint.get('iteration', None)  # Return iteration if exists, None otherwise
+    def load_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar'):
+        filepath = os.path.join(folder, filename)
+        if not os.path.exists(filepath):
+            raise("No model in path {}".format(filepath))
+        map_location = None if args.cuda else 'cpu'
+        checkpoint = torch.load(filepath, map_location=map_location)
+        self.nnet.load_state_dict(checkpoint['state_dict'])
+        return checkpoint.get('iteration', None)  # Return iteration if exists, None otherwise
