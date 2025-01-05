@@ -30,6 +30,7 @@ parser.add_argument('--maxlenOfQueue', type=int, help='Max length of queue for t
 parser.add_argument('--numMCTSSims', type=int, help='Number of MCTS simulations')
 parser.add_argument('--arenaCompare', type=int, help='Number of arena comparison games')
 parser.add_argument('--cpuct', type=float, help='CPUCT value')
+parser.add_argument('--augment', action='store_true', default=False, help='Enable data augmentation')
 parser.add_argument('--checkpoint', type=str, help='Checkpoint directory')
 parser.add_argument('--dataset_path', type=str, help='Path to dataset')
 parser.add_argument('--project_name', type=str, help='wandb project name')
@@ -52,6 +53,8 @@ args = dotdict({
     'arenaCompare': 40,
     'cpuct': 1,
 
+    'augment': False,
+    
     'checkpoint': './checkpoints/',
     'load_model': False,
     'dataset_path': './othello_trajectories.pt',

@@ -76,15 +76,30 @@ class SupervisedCoach():
             black_boards = self.game.getCanonicalForm(black_boards, -1)
             white_boards = self.game.getCanonicalForm(white_boards, 1) # unnecessary actually
 
-            # Get the symmetries of the board / augmentations
-            # sym_black_boards = self.game.getSymmetries(black_boards, black_actions)
-            # sym_white_boards = self.game.getSymmetries(white_boards, white_actions)
-
             # Add the processed boards to the processed dataset
             all_boards.append(black_boards)
             all_boards.append(white_boards)
             all_actions.append(black_actions)
             all_actions.append(white_actions)
+
+            # Get the symmetries of the board / augmentations
+            if self.args.augment:
+
+                for board, action in zip(black_boards, black_actions):
+                    sym_black_boards_actions = self.game.getSymmetries(board, F.one_hot(action, num_classes=self.game.getActionSize())) # returns list of (board, action) tuples
+                    sym_black_boards = [x[0] for x in sym_black_boards_actions]
+                    sym_black_actions = [x[1] for x in sym_black_boards_actions]
+
+                    all_boards.extend(sym_black_boards)
+                    all_actions.extend(sym_black_actions)
+
+                for board, action in zip(white_boards, white_actions):
+                    sym_white_boards_actions = self.game.getSymmetries(board, F.one_hot(action, num_classes=self.game.getActionSize()))
+                    sym_white_boards = [x[0] for x in sym_white_boards_actions]
+                    sym_white_actions = [x[1] for x in sym_white_boards_actions]
+
+                    all_boards.extend(sym_white_boards)
+                    all_actions.extend(sym_white_actions)
 
         # return tensordataset
         board_tensor = torch.FloatTensor(np.concatenate(all_boards, axis=0))
