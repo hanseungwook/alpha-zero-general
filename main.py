@@ -51,7 +51,7 @@ args = dotdict({
     'updateThreshold': 0.6,
     'maxlenOfQueue': 200000,
     'numMCTSSims': 25,
-    'arenaCompare': 40,
+    'arenaCompare': 20,
     'cpuct': 1,
 
     'augment': False,
@@ -59,7 +59,7 @@ args = dotdict({
     'checkpoint': './checkpoints/',
     'load_model': False,
     'dataset_path': './othello_trajectories.pt',
-    'numItersForTrainExamplesHistory': 20,
+    'numItersForTrainExamplesHistory': 10,
 
     'project_name': 'alpha-zero-othello',
     'experiment_name': 'default',

@@ -24,6 +24,10 @@ class NaiveSearch():
         """
         # Get policy from neural network
         policy = self.nnet.predict(canonicalBoard)
+
+        # if network returns policy and value, only use policy
+        if isinstance(policy, tuple):
+            policy = policy[0]
         
         # Get valid moves and mask invalid ones
         valids = self.game.getValidMoves(canonicalBoard, 1)

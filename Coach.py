@@ -16,6 +16,7 @@ from copy import deepcopy
 
 from Arena import Arena
 from MCTS import MCTS
+from NaiveSearch import NaiveSearch
 from othello.OthelloPlayers import RandomPlayer
 
 log = logging.getLogger(__name__)
@@ -261,8 +262,9 @@ class Coach():
             # Add new arena comparison against random player
             log.info('PITTING AGAINST RANDOM PLAYER')
             rp = RandomPlayer(self.game).play
+            nns = NaiveSearch(self.game, self.nnet, self.args)
             random_arena = Arena(rp,
-                               lambda x: np.argmax(self.nnet.predict(x)[0]), self.game)
+                               lambda x: np.argmax(nns.getActionProb(x)), self.game)
             rwins, nnwins, rdraws, rinvalids = random_arena.playGames(self.args.arenaCompare)
             log.info('NEW/RANDOM WINS : %d / %d ; DRAWS : %d ; INVALID : %d' % (nnwins, rwins, rdraws, rinvalids))
 
