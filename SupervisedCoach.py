@@ -15,6 +15,7 @@ import torch.nn.functional as F
 
 from Arena import Arena
 from othello.OthelloPlayers import RandomPlayer
+from NaiveSearch import NaiveSearch
 
 log = logging.getLogger(__name__)
 
@@ -134,8 +135,13 @@ class SupervisedCoach():
             log.info(f'Epoch {epoch + 1} average loss: {epoch_loss}')
 
             log.info('PITTING AGAINST PREVIOUS VERSION')
-            arena = Arena(lambda x: np.argmax(self.pnet.predict(x)),
-                        lambda x: np.argmax(self.nnet.predict(x)), self.game)
+
+            nns = NaiveSearch(self.game, self.nnet, self.args)
+            pns = NaiveSearch(self.game, self.pnet, self.args)
+
+
+            arena = Arena(lambda x: np.argmax(pns.getActionProb(x)),
+                          lambda x: np.argmax(nns.getActionProb(x)), self.game)
             pwins, nwins, draws, invalids = arena.playGames(self.args.arenaCompare)
 
             log.info('NEW/PREV WINS : %d / %d ; DRAWS : %d ; INVALID : %d' % (nwins, pwins, draws, invalids))
@@ -144,7 +150,7 @@ class SupervisedCoach():
             log.info('PITTING AGAINST RANDOM PLAYER')
             rp = RandomPlayer(self.game).play
             random_arena = Arena(rp,
-                               lambda x: np.argmax(self.nnet.predict(x)), self.game)
+                               lambda x: np.argmax(nns.getActionProb(x)), self.game)
             rwins, nnwins, rdraws, rinvalids = random_arena.playGames(self.args.arenaCompare)
             log.info('NEW/RANDOM WINS : %d / %d ; DRAWS : %d ; INVALID : %d' % (nnwins, rwins, rdraws, rinvalids))
 

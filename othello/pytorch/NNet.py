@@ -26,7 +26,7 @@ args = dotdict({
 })
 
 sup_args = dotdict({
-    'lr': 0.001,
+    'lr': 0.01,
     'dropout': 0.3,
     # 'epochs': 10,
     # 'batch_size': 128,
@@ -44,7 +44,7 @@ class NNetWrapperSupervised(NeuralNet):
         if args.cuda:
             self.nnet.cuda()
         self.device = torch.device('cuda')
-        self.optimizer = optim.Adam(self.nnet.parameters())
+        self.optimizer = optim.Adam(self.nnet.parameters(), lr=sup_args.lr)
     
     def train(self, train_loader, epoch):
         """
