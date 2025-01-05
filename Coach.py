@@ -291,8 +291,8 @@ class Coach():
             Pickler(f).dump(self.trainExamplesHistory)
         f.closed
 
-    def loadTrainExamples(self):
-        modelFile = os.path.join(self.args.load_folder_file[0], self.args.load_folder_file[1])
+    def loadTrainExamples(self, modelFile):
+        # modelFile = os.path.join(self.args.load_folder_file[0], self.args.load_folder_file[1])
         examplesFile = modelFile + ".examples"
         if not os.path.isfile(examplesFile):
             log.warning(f'File "{examplesFile}" with trainExamples not found!')

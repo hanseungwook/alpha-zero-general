@@ -121,6 +121,13 @@ class SupervisedCoach():
         train_dataset = self.load_dataset(self.args.dataset_path)
         train_dataset = self.preprocess_dataset(train_dataset)
 
+        # randomly subset the tensor dataset if specified
+        if self.args.subset_ratio < 1.0:
+            indices = torch.randperm(len(train_dataset))[:int(len(train_dataset) * self.args.subset_ratio)]
+            # Create subset of the dataset
+            train_dataset = torch.utils.data.Subset(train_dataset, indices)
+            log.info(f"Using {int(self.args.subset_ratio * len(train_dataset))} examples ({self.args.subset_ratio * 100}% of original dataset)")
+
         # wrap in dataloader
         train_loader = DataLoader(train_dataset, batch_size=self.args.batch_size, shuffle=True)
 
@@ -174,6 +181,8 @@ class SupervisedCoach():
             #     log.info('ACCEPTING NEW MODEL')
             #     self.nnet.save_checkpoint(folder=self.args.checkpoint, filename=self.getCheckpointFile(i))
             #     self.nnet.save_checkpoint(folder=self.args.checkpoint, filename='best.pth.tar')
+
+            self.nnet.save_checkpoint(folder=self.args.checkpoint, filename=self.getCheckpointFile(epoch))
 
             # Log final metrics to wandb
             wandb.log({
