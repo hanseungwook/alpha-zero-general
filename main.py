@@ -53,6 +53,7 @@ args = dotdict({
     'cpuct': 1,
 
     'checkpoint': './checkpoints/',
+    'load_model': False,
     'dataset_path': './othello_trajectories.pt',
     'numItersForTrainExamplesHistory': 20,
 
@@ -93,6 +94,7 @@ def main():
         latest_checkpoint = get_latest_checkpoint(args.checkpoint)
         log.info('Loading checkpoint "%s"...', latest_checkpoint)
         start_iter = nnet.load_checkpoint(latest_checkpoint)
+        args.load_model = True
     except Exception as e:
         log.warning(f"Error loading checkpoint: {e}")
         log.warning("Continuing without loading a checkpoint.")
