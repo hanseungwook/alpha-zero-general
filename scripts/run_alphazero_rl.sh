@@ -3,7 +3,7 @@
 #SBATCH --job-name=alphazero
 #SBATCH --output=logs/alphazero-%j.out
 #SBATCH --error=logs/alphazero-%j.err
-#SBATCH --partition=vision-pulkitag-h100
+#SBATCH --partition=vision-pulkitag-a100,vision-pulkitag-v100
 #SBATCH --qos=vision-pulkitag-main
 #SBATCH --mem=400G
 #SBATCH --cpus-per-task=16
