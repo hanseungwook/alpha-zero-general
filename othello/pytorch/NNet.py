@@ -21,7 +21,7 @@ args = dotdict({
     'dropout': 0.3,
     'epochs': 10,
     'batch_size': 64,
-    'cuda': torch.cuda.is_available(),
+    'cuda': True, # torch.cuda.is_available(),
     'num_channels': 512,
 })
 
@@ -30,7 +30,7 @@ sup_args = dotdict({
     'dropout': 0.3,
     # 'epochs': 10,
     # 'batch_size': 128,
-    'cuda': torch.cuda.is_available(),
+    'cuda': True,
     'num_channels': 512,
 })
 
@@ -43,7 +43,7 @@ class NNetWrapperSupervised(NeuralNet):
 
         if args.cuda:
             self.nnet.cuda()
-        
+        self.device = torch.device('cuda')
         self.optimizer = optim.Adam(self.nnet.parameters())
     
     def train(self, train_loader, epoch):
@@ -56,7 +56,7 @@ class NNetWrapperSupervised(NeuralNet):
         t = tqdm(train_loader, desc=f'Training Net Epoch {epoch + 1}')
         for step, (boards, target_actions) in enumerate(t):
             if args.cuda:
-                boards, target_actions = boards.contiguous().cuda(), target_actions.contiguous().cuda()
+                boards, target_actions = boards.contiguous().to(self.device), target_actions.contiguous().to(self.device)
 
             # compute output
             out_pi = self.nnet(boards)
@@ -92,7 +92,8 @@ class NNetWrapperSupervised(NeuralNet):
         # preparing input
         if not isinstance(board, torch.Tensor):
             board = torch.FloatTensor(board.astype(np.float64))
-        if args.cuda: board = board.contiguous().cuda()
+        if args.cuda:
+            board = board.contiguous().to(self.device)
         board = board.view(1, self.board_x, self.board_y)
         self.nnet.eval()
         with torch.no_grad():
@@ -132,13 +133,16 @@ class NNetWrapper(NeuralNet):
         self.board_x, self.board_y = game.getBoardSize()
         self.action_size = game.getActionSize()
 
-        if args.cuda:
-            self.nnet.cuda()
+        # if args.cuda:
+            # self.nnet.cuda()
+
+        self.device = torch.device('cuda')
 
     def train(self, examples):
         """
         examples: list of examples, each example is of form (board, pi, v)
         """
+        self.nnet.to(self.device)
         optimizer = optim.Adam(self.nnet.parameters())
 
         for epoch in range(args.epochs):
@@ -159,7 +163,7 @@ class NNetWrapper(NeuralNet):
 
                 # predict
                 if args.cuda:
-                    boards, target_pis, target_vs = boards.contiguous().cuda(), target_pis.contiguous().cuda(), target_vs.contiguous().cuda()
+                    boards, target_pis, target_vs = boards.contiguous().to(self.device), target_pis.contiguous().to(self.device), target_vs.contiguous().to(self.device)
 
                 # compute output
                 out_pi, out_v = self.nnet(boards)
@@ -188,12 +192,16 @@ class NNetWrapper(NeuralNet):
         """
         board: np array with board
         """
+
+        self.nnet.to(self.device)
+
         # timing
         start = time.time()
 
         # preparing input
         board = torch.FloatTensor(board.astype(np.float64))
-        if args.cuda: board = board.contiguous().cuda()
+        if args.cuda: 
+            board = board.contiguous().to(self.device)
         board = board.view(1, self.board_x, self.board_y)
         self.nnet.eval()
         with torch.no_grad():
@@ -208,22 +216,25 @@ class NNetWrapper(NeuralNet):
     def loss_v(self, targets, outputs):
         return torch.sum((targets - outputs.view(-1)) ** 2) / targets.size()[0]
 
-    def save_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar'):
-        filepath = os.path.join(folder, filename)
-        if not os.path.exists(folder):
-            print("Checkpoint Directory does not exist! Making directory {}".format(folder))
-            os.mkdir(folder)
-        else:
-            print("Checkpoint Directory exists! ")
-        torch.save({
-            'state_dict': self.nnet.state_dict(),
-        }, filepath)
+def save_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar', iteration=None):
+    filepath = os.path.join(folder, filename)
+    if not os.path.exists(folder):
+        print("Checkpoint Directory does not exist! Making directory {}".format(folder))
+        os.mkdir(folder)
+    else:
+        print("Checkpoint Directory exists!")
+    
+    checkpoint = {
+        'state_dict': self.nnet.state_dict(),
+        'iteration': iteration
+    }
+    torch.save(checkpoint, filepath)
 
-    def load_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar'):
-        # https://github.com/pytorch/examples/blob/master/imagenet/main.py#L98
-        filepath = os.path.join(folder, filename)
-        if not os.path.exists(filepath):
-            raise ("No model in path {}".format(filepath))
-        map_location = None if args.cuda else 'cpu'
-        checkpoint = torch.load(filepath, map_location=map_location)
-        self.nnet.load_state_dict(checkpoint['state_dict'])
+def load_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar'):
+    filepath = os.path.join(folder, filename)
+    if not os.path.exists(filepath):
+        raise("No model in path {}".format(filepath))
+    map_location = None if args.cuda else 'cpu'
+    checkpoint = torch.load(filepath, map_location=map_location)
+    self.nnet.load_state_dict(checkpoint['state_dict'])
+    return checkpoint.get('iteration', None)  # Return iteration if exists, None otherwise

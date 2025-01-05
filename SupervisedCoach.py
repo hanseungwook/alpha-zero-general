@@ -95,7 +95,7 @@ class SupervisedCoach():
         return TensorDataset(board_tensor, action_tensor)
 
 
-    def learn(self):
+    def learn(self, start_iter=1):
         """
         Performs supervised learning on pre-collected dataset.
         """
@@ -121,26 +121,28 @@ class SupervisedCoach():
             log.info('PITTING AGAINST PREVIOUS VERSION')
             arena = Arena(lambda x: np.argmax(self.pnet.predict(x)),
                         lambda x: np.argmax(self.nnet.predict(x)), self.game)
-            pwins, nwins, draws = arena.playGames(self.args.arenaCompare)
+            pwins, nwins, draws, invalids = arena.playGames(self.args.arenaCompare)
 
-            log.info('NEW/PREV WINS : %d / %d ; DRAWS : %d' % (nwins, pwins, draws))
+            log.info('NEW/PREV WINS : %d / %d ; DRAWS : %d ; INVALID : %d' % (nwins, pwins, draws, invalids))
 
             # Add new arena comparison against random player
             log.info('PITTING AGAINST RANDOM PLAYER')
             rp = RandomPlayer(self.game).play
             random_arena = Arena(rp,
                                lambda x: np.argmax(self.nnet.predict(x)), self.game)
-            rwins, nnwins, rdraws = random_arena.playGames(self.args.arenaCompare)
-            log.info('NEW/RANDOM WINS : %d / %d ; DRAWS : %d' % (nnwins, rwins, rdraws))
+            rwins, nnwins, rdraws, rinvalids = random_arena.playGames(self.args.arenaCompare)
+            log.info('NEW/RANDOM WINS : %d / %d ; DRAWS : %d ; INVALID : %d' % (nnwins, rwins, rdraws, rinvalids))
 
             # Log final metrics to wandb
             wandb.log({
                 'epoch': epoch + 1,
                 'arena_prev/new_model_wins': nwins,
                 'arena_prev/draws': draws,
+                'arena_prev/invalids': invalids,
                 'arena_prev/win_rate': float(nwins) / (pwins + nwins) if (pwins + nwins) > 0 else 0,
                 'arena_random/new_model_wins': nnwins,
                 'arena_random/draws': rdraws,
+                'arena_random/invalids': rinvalids,
                 'arena_random/win_rate': float(nnwins) / (rwins + nnwins) if (rwins + nnwins) > 0 else 0,
                 'epoch_loss': epoch_loss
             })

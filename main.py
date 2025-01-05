@@ -3,6 +3,7 @@ import numpy as np
 import torch
 import random
 import argparse
+import os
 
 import coloredlogs
 import wandb
@@ -30,7 +31,6 @@ parser.add_argument('--numMCTSSims', type=int, help='Number of MCTS simulations'
 parser.add_argument('--arenaCompare', type=int, help='Number of arena comparison games')
 parser.add_argument('--cpuct', type=float, help='CPUCT value')
 parser.add_argument('--checkpoint', type=str, help='Checkpoint directory')
-parser.add_argument('--load_model', action='store_true', help='Whether to load a model')
 parser.add_argument('--dataset_path', type=str, help='Path to dataset')
 parser.add_argument('--project_name', type=str, help='wandb project name')
 parser.add_argument('--seed', type=int, help='Random seed')
@@ -51,13 +51,12 @@ args = dotdict({
     'arenaCompare': 40,
     'cpuct': 1,
 
-    'checkpoint': './temp/',
-    'load_model': False,
-    'load_folder_file': ('/dev/models/8x100x50','best.pth.tar'),
+    'checkpoint': './checkpoints/',
     'dataset_path': './othello_trajectories.pt',
     'numItersForTrainExamplesHistory': 20,
 
     'project_name': 'alpha-zero-othello',
+    'experiment_name': 'default',
     'seed': 42,
 
     'batch_size': 512,
@@ -68,9 +67,6 @@ args = dotdict({
 for arg in vars(cmd_args):
     if getattr(cmd_args, arg) is not None:  # Only update if the argument was specified
         args[arg] = getattr(cmd_args, arg)
-
-# Add supervised flag from command line to args
-args.supervised = cmd_args.supervised
 
 def main():
     # Set random seeds for reproducibility
@@ -90,15 +86,16 @@ def main():
     else:
         nnet = nn(g)
 
-    if args.load_model:
-        try:
-            log.info('Loading checkpoint "%s/%s"...', args.load_folder_file[0], args.load_folder_file[1])
-            nnet.load_checkpoint(args.load_folder_file[0], args.load_folder_file[1])
-        except Exception as e:
-            log.warning(f"Error loading checkpoint: {e}")
-            log.warning("Continuing without loading a checkpoint.")
-    else:
-        log.warning('Not loading a checkpoint!')
+    args.checkpoint = os.path.join(args.checkpoint, args.experiment_name)
+
+    try:
+        latest_checkpoint = get_latest_checkpoint(args.checkpoint)
+        log.info('Loading checkpoint "%s"...', latest_checkpoint)
+        start_iter = nnet.load_checkpoint(latest_checkpoint)
+    except Exception as e:
+        log.warning(f"Error loading checkpoint: {e}")
+        log.warning("Continuing without loading a checkpoint.")
+        start_iter = 1
 
     log.info('Loading the Coach...')
     if args.supervised:
@@ -113,11 +110,12 @@ def main():
     # Initialize wandb
     wandb.init(
         project=args.project_name,
+        id=args.experiment_name,
         config=dict(args)
     )
 
     log.info('Starting the learning process 🎉')
-    c.learn()
+    c.learn(start_iter=start_iter)
 
 
 if __name__ == "__main__":
