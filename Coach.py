@@ -238,7 +238,7 @@ class Coach():
             shuffle(trainExamples)
 
             # training new network, keeping a copy of the old one
-            self.nnet.save_checkpoint(folder=self.args.checkpoint, filename='coach_temp.pth.tar')
+            self.nnet.save_checkpoint(folder=self.args.checkpoint, filename='coach_temp.pth.tar', iteration=i)
             self.pnet.load_checkpoint(folder=self.args.checkpoint, filename='coach_temp.pth.tar')
             pmcts = MCTS(self.game, self.pnet, self.args)
 
@@ -256,8 +256,8 @@ class Coach():
                 self.nnet.load_checkpoint(folder=self.args.checkpoint, filename='coach_temp.pth.tar')
             else:
                 log.info('ACCEPTING NEW MODEL')
-                self.nnet.save_checkpoint(folder=self.args.checkpoint, filename=self.getCheckpointFile(i))
-                self.nnet.save_checkpoint(folder=self.args.checkpoint, filename='best.pth.tar')
+                self.nnet.save_checkpoint(folder=self.args.checkpoint, filename=self.getCheckpointFile(i), iteration=i)
+                self.nnet.save_checkpoint(folder=self.args.checkpoint, filename='best.pth.tar', iteration=i)
 
             # Add new arena comparison against random player
             log.info('PITTING AGAINST RANDOM PLAYER')
