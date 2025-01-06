@@ -126,7 +126,7 @@ def main():
     # Initialize wandb
     wandb.init(
         project=args.project_name,
-        id=args.experiment_name,
+        name=args.experiment_name,
         config=dict(args)
     )
 
