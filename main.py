@@ -127,6 +127,10 @@ def main():
         checkpoint_folder, checkpoint_filename = os.path.split(latest_checkpoint)
         start_iter = nnet.load_checkpoint(checkpoint_folder, checkpoint_filename)
         args.load_model = True
+
+        if start_iter is None:
+            log.warning('Start iteration not found in checkpoint (expected if loading supervised model)')
+            start_iter = 1
     except Exception as e:
         log.warning(f"Error loading checkpoint: {e}")
         log.warning("Continuing without loading a checkpoint.")
