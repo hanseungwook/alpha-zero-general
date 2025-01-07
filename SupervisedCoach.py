@@ -121,6 +121,12 @@ class SupervisedCoach():
         train_dataset = self.load_dataset(self.args.dataset_path)
         train_dataset = self.preprocess_dataset(train_dataset)
 
+        # Add noise to the dataset
+        if self.args.noise_ratio > 0.0:
+            log.info(f"Adding noise to the dataset with ratio {self.args.noise_ratio}")
+            noise_dataset = self.load_dataset(self.args.noise_dataset_path)
+            noise_dataset = self.preprocess_dataset(noise_dataset)
+            num_noise_examples = int(len(train_dataset) * self.args.noise_ratio)
         # randomly subset the tensor dataset if specified
         if self.args.subset_ratio < 1.0:
             indices = torch.randperm(len(train_dataset))[:int(len(train_dataset) * self.args.subset_ratio)]
@@ -128,6 +134,12 @@ class SupervisedCoach():
             train_dataset = torch.utils.data.Subset(train_dataset, indices)
             log.info(f"Using {int(self.args.subset_ratio * len(train_dataset))} examples ({self.args.subset_ratio * 100}% of original dataset)")
 
+        # add noise to the dataset if specified
+        if self.args.noise_ratio > 0.0:
+            indices = torch.randperm(len(noise_dataset))[:num_noise_examples] # randomly subset the respective ratio number of examples from noise
+            noise_dataset = torch.utils.data.Subset(noise_dataset, indices)
+            train_dataset = torch.utils.data.ConcatDataset([train_dataset, noise_dataset])
+            log.info(f"Total dataset size: {len(train_dataset)} with {num_noise_examples} noise examples and {len(train_dataset) - num_noise_examples} original examples")
         # wrap in dataloader
         train_loader = DataLoader(train_dataset, batch_size=self.args.batch_size, shuffle=True)
 

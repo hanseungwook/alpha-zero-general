@@ -1,5 +1,6 @@
 .vscode/
 logs/
+synthetic_othello_*
 othello_trajectories.pt*
 wandb/
 *.pyc

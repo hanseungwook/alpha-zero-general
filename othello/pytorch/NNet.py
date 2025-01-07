@@ -236,5 +236,5 @@ class NNetWrapper(NeuralNet):
             raise("No model in path {}".format(filepath))
         map_location = None if args.cuda else 'cpu'
         checkpoint = torch.load(filepath, map_location=map_location)
-        self.nnet.load_state_dict(checkpoint['state_dict'])
+        self.nnet.load_state_dict(checkpoint['state_dict'], strict=False)
         return checkpoint.get('iteration', None)  # Return iteration if exists, None otherwise

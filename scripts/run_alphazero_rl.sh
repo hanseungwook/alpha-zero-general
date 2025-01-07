@@ -11,4 +11,4 @@
 #SBATCH --ntasks=1
 #SBATCH --time=48:00:00
 
-python main.py --experiment_name alphazero_rl
+python main.py --experiment_name alphazero_rl2 --numEps 200 --updateThreshold 0.55 --numMCTSSims 200

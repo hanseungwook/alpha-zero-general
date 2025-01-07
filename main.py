@@ -32,8 +32,11 @@ parser.add_argument('--arenaCompare', type=int, help='Number of arena comparison
 parser.add_argument('--cpuct', type=float, help='CPUCT value')
 parser.add_argument('--augment', action='store_true', default=False, help='Enable data augmentation')
 parser.add_argument('--checkpoint', type=str, help='Checkpoint directory')
+parser.add_argument('--checkpoint_folder', type=str, help='Checkpoint folder')
+parser.add_argument('--checkpoint_filename', type=str, help='Checkpoint filename')
 parser.add_argument('--dataset_path', type=str, help='Path to dataset')
 parser.add_argument('--subset_ratio', type=float, help='Ratio of training data to use (0.0-1.0)')
+parser.add_argument('--noise_ratio', type=float, help='Ratio of noise to add to training data (0.0-1.0)')
 parser.add_argument('--project_name', type=str, help='wandb project name')
 parser.add_argument('--experiment_name', type=str, help='wandb experiment name')
 parser.add_argument('--seed', type=int, help='Random seed')
@@ -46,19 +49,22 @@ cmd_args = parser.parse_args()
 # Define default arguments
 args = dotdict({
     'numIters': 1000,
-    'numEps': 100,
+    'numEps': 200,
     'tempThreshold': 15,
-    'updateThreshold': 0.6,
+    'updateThreshold': 0.55,
     'maxlenOfQueue': 200000,
-    'numMCTSSims': 25,
+    'numMCTSSims': 200,
     'arenaCompare': 40,
     'cpuct': 1,
 
     'augment': False,
     
     'checkpoint': './checkpoints/',
+    'checkpoint_folder': '',
+    'checkpoint_filename': '',
     'load_model': False,
     'dataset_path': './othello_trajectories.pt',
+    'noise_dataset_path': './synthetic_othello_trajectories.pt',
     'numItersForTrainExamplesHistory': 10,
 
     'project_name': 'alpha-zero-othello',
@@ -66,9 +72,15 @@ args = dotdict({
     'seed': 42,
 
     'subset_ratio': 1.0,  # Use all data by default
+    'noise_ratio': 0.0,
     'batch_size': 512,
     'epochs': 10,
 })
+
+# 'numIters': 75,
+# 'numEps': 200,
+# 'updateThreshold': 0.55,
+# 'numMCTSSims': 200,
 
 # Update args with any command-line specified values
 for arg in vars(cmd_args):
@@ -81,7 +93,11 @@ def main():
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
     if torch.cuda.is_available():
-        torch.cuda.manual_seed(args.seed)
+        torch.cuda.manual_seed(args.seed)\
+            
+    # if noise_ratio is greater than 0, then adjust subset_ratio to be 1 - noise_ratio
+    if args.noise_ratio > 0.0:
+        args.subset_ratio = 1.0 - args.noise_ratio
     
     log.info('Loading %s...', Game.__name__)
     g = Game(8)
@@ -101,7 +117,10 @@ def main():
     args.checkpoint = os.path.join(args.checkpoint, args.experiment_name)
 
     try:
-        latest_checkpoint = get_latest_checkpoint(args.checkpoint)
+        if args.checkpoint_folder and args.checkpoint_filename and os.path.isfile(os.path.join(args.checkpoint_folder, args.checkpoint_filename)):
+            latest_checkpoint = os.path.join(args.checkpoint_folder, args.checkpoint_filename)
+        else:
+            latest_checkpoint = get_latest_checkpoint(args.checkpoint)
         log.info('Loading checkpoint "%s"...', latest_checkpoint)
 
         # separate checkpoint path into folder and filename

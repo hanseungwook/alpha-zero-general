@@ -40,11 +40,14 @@ if mini_othello:
     n2.load_checkpoint('./pretrained_models/othello/pytorch/','6x100x25_supervised_best.pth.tar')
 else:
     # n1.load_checkpoint('./temp/','best.pth.tar')
-    n2.load_checkpoint('./checkpoints/sft_rerun2/','temp.pth.tar')
     n1.load_checkpoint('./pretrained_models/othello/pytorch/','8x8_100checkpoints_best.pth.tar')
+    
+    # n2.load_checkpoint('./checkpoints/sft_rerun2/','temp.pth.tar')
+    # n2.load_checkpoint('./checkpoints/sft_subset0.75/', 'checkpoint_9.pth.tar')
+    n2.load_checkpoint('./checkpoints/sft_noise_0.4/', 'checkpoint_9.pth.tar')
 
 # Setup MCTS for both networks
-args = dotdict({'numMCTSSims': 200, 'cpuct':1.0})
+args = dotdict({'numMCTSSims': 100, 'cpuct':1.0})
 
 mcts = MCTS(g, n1, args)
 ns = NaiveSearch(g, n2, args)
