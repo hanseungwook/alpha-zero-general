@@ -183,7 +183,7 @@ class NNetWrapper(NeuralNet):
                 with torch.no_grad():
                     ref_pi, _ = self.ref_nnet(boards)
                 kl_loss = self.loss_kl(out_pi, ref_pi)
-                total_loss = l_pi + l_v - kl_loss * self.kl_coef
+                total_loss = l_pi + l_v + kl_loss * self.kl_coef
 
                 # record loss
                 pi_losses.update(l_pi.item(), boards.size(0))
@@ -201,8 +201,8 @@ class NNetWrapper(NeuralNet):
                     'train/policy_loss': l_pi.item(),
                     'train/value_loss': l_v.item(),
                     'train/total_loss': total_loss.item(),
-                    'train/kl_loss': -1.0 * kl_loss.item(),
-                    'train/kl_loss_weighted': -self.kl_coef * kl_loss.item(),
+                    'train/kl_loss': kl_loss.item(),
+                    'train/kl_loss_weighted': self.kl_coef * kl_loss.item(),
                 })
 
     def predict(self, board):
@@ -233,10 +233,15 @@ class NNetWrapper(NeuralNet):
     def loss_v(self, targets, outputs):
         return torch.sum((targets - outputs.view(-1)) ** 2) / targets.size()[0]
 
-    def loss_kl(self, current_probs, ref_probs):
-        """Compute KL divergence between current and reference policy distributions"""
-        kl = current_probs - ref_probs
-        return kl
+    def loss_kl(self, current_log_probs, ref_log_probs):
+        """
+        Compute KL divergence between current and reference policy distributions
+        Both inputs are already log probabilities (log softmax)
+        KL(current || ref) = sum(exp(current_log_probs) * (current_log_probs - ref_log_probs))
+        """
+        current_probs = torch.exp(current_log_probs)  # Convert current to probabilities
+        kl = torch.sum(current_probs * (current_log_probs - ref_log_probs), dim=1)  # KL for each sample
+        return kl.mean()
     
     def save_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar', iteration=None):
         filepath = os.path.join(folder, filename)
