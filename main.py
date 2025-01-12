@@ -108,7 +108,7 @@ def main():
         log.info('Supervised training enabled...')
         nnet = nn_sup(g)
     else:
-        nnet = nn(g)
+        nnet = nn(g, kl_coef=args.kl_coef)
     
     # Add torch.compile for the neural network
     # if torch.cuda.is_available():
