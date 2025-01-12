@@ -128,10 +128,17 @@ class NNetWrapperSupervised(NeuralNet):
 
 
 class NNetWrapper(NeuralNet):
-    def __init__(self, game):
+    def __init__(self, game, kl_coef=0.05):
         self.nnet = onnet(game, args)
         self.board_x, self.board_y = game.getBoardSize()
         self.action_size = game.getActionSize()
+        self.kl_coef = kl_coef
+
+        # Reference policy
+        self.ref_nnet = onnet(game, args)
+        # Freeze reference policy
+        for param in self.ref_nnet.parameters():
+            param.requires_grad = False
 
         # if args.cuda:
             # self.nnet.cuda()
@@ -143,6 +150,7 @@ class NNetWrapper(NeuralNet):
         examples: list of examples, each example is of form (board, pi, v)
         """
         self.nnet.to(self.device)
+        self.ref_nnet.to(self.device)
         optimizer = optim.Adam(self.nnet.parameters())
 
         for epoch in range(args.epochs):
@@ -150,6 +158,7 @@ class NNetWrapper(NeuralNet):
             self.nnet.train()
             pi_losses = AverageMeter()
             v_losses = AverageMeter()
+            kl_losses = AverageMeter()
 
             batch_count = int(len(examples) / args.batch_size)
 
@@ -169,12 +178,18 @@ class NNetWrapper(NeuralNet):
                 out_pi, out_v = self.nnet(boards)
                 l_pi = self.loss_pi(target_pis, out_pi)
                 l_v = self.loss_v(target_vs, out_v)
-                total_loss = l_pi + l_v
+
+                # compute ref policy output
+                with torch.no_grad():
+                    ref_pi, _ = self.ref_nnet(boards)
+                kl_loss = self.loss_kl(out_pi, ref_pi)
+                total_loss = l_pi + l_v - kl_loss * self.kl_coef
 
                 # record loss
                 pi_losses.update(l_pi.item(), boards.size(0))
                 v_losses.update(l_v.item(), boards.size(0))
-                t.set_postfix(Loss_pi=pi_losses, Loss_v=v_losses)
+                kl_losses.update(kl_loss.item(), boards.size(0))
+                t.set_postfix(Loss_pi=pi_losses, Loss_v=v_losses, Loss_kl=kl_losses)
 
                 # compute gradient and do SGD step
                 optimizer.zero_grad()
@@ -186,6 +201,8 @@ class NNetWrapper(NeuralNet):
                     'train/policy_loss': l_pi.item(),
                     'train/value_loss': l_v.item(),
                     'train/total_loss': total_loss.item(),
+                    'train/kl_loss': -1.0 * kl_loss.item(),
+                    'train/kl_loss_weighted': -self.kl_coef * kl_loss.item(),
                 })
 
     def predict(self, board):
@@ -216,6 +233,11 @@ class NNetWrapper(NeuralNet):
     def loss_v(self, targets, outputs):
         return torch.sum((targets - outputs.view(-1)) ** 2) / targets.size()[0]
 
+    def loss_kl(self, current_probs, ref_probs):
+        """Compute KL divergence between current and reference policy distributions"""
+        kl = current_probs - ref_probs
+        return kl
+    
     def save_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar', iteration=None):
         filepath = os.path.join(folder, filename)
         if not os.path.exists(folder):
@@ -225,6 +247,7 @@ class NNetWrapper(NeuralNet):
             print("Checkpoint Directory exists!")
         
         checkpoint = {
+            'ref_state_dict': self.ref_nnet.state_dict(),
             'state_dict': self.nnet.state_dict(),
             'iteration': iteration
         }
@@ -237,4 +260,11 @@ class NNetWrapper(NeuralNet):
         map_location = None if args.cuda else 'cpu'
         checkpoint = torch.load(filepath, map_location=map_location)
         self.nnet.load_state_dict(checkpoint['state_dict'], strict=False)
+
+        if 'ref_state_dict' in checkpoint:
+            self.ref_nnet.load_state_dict(checkpoint['ref_state_dict'])
+        else:
+            print('No reference policy found in checkpoint -- loading same weights as policy')
+            self.ref_nnet.load_state_dict(self.nnet.state_dict())
+
         return checkpoint.get('iteration', None)  # Return iteration if exists, None otherwise
