@@ -11,4 +11,4 @@
 #SBATCH --ntasks=1
 #SBATCH --time=48:00:00
 
-python main.py --experiment_name rl_sft_noise0.3 --numEps 200 --updateThreshold 0.55 --numMCTSSims 200 --checkpoint_folder ./checkpoints/sft_noise_0.3/ --checkpoint_filename checkpoint_9.pth.tar
+python main.py --experiment_name rl_sft_noise0.3 --numEps 200 --updateThreshold 0.55 --numMCTSSims 200 --checkpoint_folder ./checkpoints/sft_noise_0.3/ --checkpoint_filename checkpoint_9.pth.tar --kl_coef 0.05
